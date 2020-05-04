@@ -1,9 +1,12 @@
 ﻿using System.Collections.Generic;
 using Android.App;
 using Android.Content;
+using Android.Net;
+using Android.Service.Autofill;
 using Android.Support.V4.App;
 using Android.Util;
 using Firebase.Messaging;
+using Newtonsoft.Json;
 
 namespace HomeNotify.Android
 {
@@ -19,7 +22,7 @@ namespace HomeNotify.Android
 
         public override void OnMessageReceived(RemoteMessage message)
         {
-            SendNotification(message.GetNotification().Body, message.Data);
+            SendNotification(message.GetNotification() == null ? null : message.GetNotification().Body, message.Data);
         }
         
         void SendNotification(string messageBody, IDictionary<string, string> data)
@@ -36,20 +39,52 @@ namespace HomeNotify.Android
                 intent,
                 PendingIntentFlags.OneShot);
 
-            var notificationBuilder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
-                .SetSmallIcon(Resource.Color.transparent)
-                .SetContentTitle("HomeNotify")
-                .SetContentText(messageBody)
-                .SetAutoCancel(true)
-                .SetContentIntent(pendingIntent);
-            
-            /*
-                TODO: use message data to make actions, etc
-                intention is to use ONLY data payloads so all notifications are built manually
-                (notification payloads don't pass through OnMessageReceived when app is in background)
-            */
-
+            NotificationCompat.Builder notificationBuilder;
             var notificationManager = NotificationManagerCompat.From(this);
+
+            if (data.ContainsKey("topics"))
+            {
+                var topics = JsonConvert.DeserializeObject<IList<string>>(data["topics"]);
+                foreach (string topic in topics)
+                {
+                    FirebaseMessaging.Instance.SubscribeToTopic(topic);
+                    Log.Debug(TAG, $"Subscribed to topic: {topic}.");
+                }
+                notificationBuilder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
+                    .SetSmallIcon(Resource.Color.transparent)
+                    .SetContentTitle("HomeNotify")
+                    .SetContentText($"Subscribed to {topics.Count} topics.")
+                    .SetAutoCancel(true)
+                    .SetContentIntent(pendingIntent);
+            }
+            else if (data.ContainsKey("unsubscribeTopic"))
+            {
+                var topic = data["unsubscribeTopic"];
+                FirebaseMessaging.Instance.UnsubscribeFromTopic(topic);
+                Log.Debug(TAG, $"Unsubscribed from topic {topic}.");
+                notificationBuilder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
+                    .SetSmallIcon(Resource.Color.transparent)
+                    .SetContentTitle("HomeNotify")
+                    .SetContentText($"Unsubscribed from topic: {topic}.")
+                    .SetAutoCancel(true)
+                    .SetContentIntent(pendingIntent);
+            }
+            else
+            {
+                notificationBuilder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
+                    .SetSmallIcon(Resource.Color.transparent)
+                    .SetContentTitle("HomeNotify")
+                    .SetContentText(messageBody)
+                    .SetAutoCancel(true)
+                    .SetContentIntent(pendingIntent);
+                
+                /*
+                    TODO: use message data to make actions, etc
+                    intention is to use ONLY data payloads so all notifications are built manually
+                    (notification payloads don't pass through OnMessageReceived when app is in background)
+                */
+            }
+            
             notificationManager.Notify(MainActivity.NOTIFICATION_ID, notificationBuilder.Build());
         }
     }

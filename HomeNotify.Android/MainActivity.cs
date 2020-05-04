@@ -5,6 +5,7 @@ using Android.Runtime;
 using Android.Widget;
 using Android.Content;
 using Android.Gms.Common;
+using Android.Util;
 using Firebase.Messaging;
 using Firebase.Iid;
 
@@ -13,6 +14,7 @@ namespace HomeNotify.Android
     [Activity(Label = "@string/app_name", Theme = "@style/AppTheme", MainLauncher = true)]
     public class MainActivity : AppCompatActivity
     {
+        private const string TAG = "MainActivity";
         internal static readonly string CHANNEL_ID = "general_notification_channel";
         internal static readonly int NOTIFICATION_ID = 100;
 
@@ -23,9 +25,17 @@ namespace HomeNotify.Android
             SetContentView (Resource.Layout.activity_main);
             msgText = FindViewById<TextView> (Resource.Id.msgText);
 
-            IsPlayServicesAvailable ();
+            IsPlayServicesAvailable();
 
             CreateNotificationChannel();
+            
+            var subscribeButton = FindViewById<Button>(Resource.Id.subscribeButton);
+            subscribeButton.Click += delegate {
+                FirebaseMessaging.Instance.SubscribeToTopic("topics");
+                Log.Debug(TAG, "Subscribed to topic notifications.");
+            };
+
+            Log.Debug(TAG, "FCM Token: " + FirebaseInstanceId.Instance.Token);
         }
         
         public bool IsPlayServicesAvailable ()
