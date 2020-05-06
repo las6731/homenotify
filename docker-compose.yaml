@@ -25,3 +25,4 @@ services:
             - '5001:443'
         environment:
             - GOOGLE_CREDENTIAL=service_account_key.json
+            - DB_CREDENTIALS=db_credentials_docker.json
