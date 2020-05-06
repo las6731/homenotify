@@ -1,0 +1,20 @@
+version: '3.7'
+services:
+    postgres:
+        image: postgres
+        container_name: postgres
+        ports:
+            - '5432:5432'
+        environment:
+            - POSTGRES_DB=homenotify
+            - POSTGRES_USER=homenotify
+            - POSTGRES_PASSWORD=HomeNotifyAPI123
+    pgadmin:
+        image: dpage/pgadmin4
+        container_name: pgadmin
+        ports:
+            - '5433:5433'
+        environment:
+            - PGADMIN_DEFAULT_EMAIL=admin
+            - PGADMIN_DEFAULT_PASSWORD=password
+            - PGADMIN_LISTEN_PORT=5433
