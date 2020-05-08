@@ -20,6 +20,14 @@
             android:layout_marginTop="20dp"
             android:text="@string/subscribe_button" />
 
+    <Button
+            android:id="@+id/getTopicsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="20dp"
+            android:text="@string/get_topics_button" />
+
     <TextView
             android:text="@string/topic_header"
             android:layout_width="match_parent"

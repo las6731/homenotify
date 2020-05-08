@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Net.Http;
 using Android.App;
 using Android.OS;
 using Android.Support.V7.App;
@@ -21,10 +22,14 @@ namespace HomeNotify.Android
         internal static readonly string CHANNEL_ID = "general_notification_channel";
         internal static readonly int NOTIFICATION_ID = 100;
 
+        internal static readonly string API_URL = "http://10.0.0.24:5000"; // set to your API url
+
         private TextView msgText;
         private ListView topicList;
 
         private ListAdapter listAdapter;
+
+        private HttpClient httpClient;
 
         protected override void OnCreate (Bundle bundle)
         {
@@ -36,24 +41,49 @@ namespace HomeNotify.Android
 
             CreateNotificationChannel();
             
-            var subscribeButton = FindViewById<Button>(Resource.Id.subscribeButton);
-            subscribeButton.Click += delegate {
-                FirebaseMessaging.Instance.SubscribeToTopic("topics");
-                Log.Debug(TAG, "Subscribed to topic notifications.");
-            };
-
             if (!Preferences.ContainsKey("topics"))
             {
                 Preferences.Set("topics", JsonConvert.SerializeObject(new Dictionary<string, bool>()));
             }
             
             topicList = FindViewById<ListView>(Resource.Id.topicList);
-            
-            Platform.Init(this, bundle);
-            
+
             UpdateAdapter();
+            
+            httpClient = new HttpClient();
+
+            var getTopicsButton = FindViewById<Button>(Resource.Id.getTopicsButton);
+            getTopicsButton.Click += delegate
+            {
+                var response = httpClient.GetAsync($"{API_URL}/topics").Result;
+                var content = response.Content.ReadAsStringAsync().Result;
+                var topics = JsonConvert.DeserializeObject<string[]>(content);
+                var existingTopics =
+                    JsonConvert.DeserializeObject<Dictionary<string, bool>>(Preferences.Get("topics", "{}"));
+                var before = existingTopics.Count;
+                foreach (var topic in topics)
+                {
+                    if (!existingTopics.ContainsKey(topic))
+                        existingTopics[topic] = false;
+                }
+                Preferences.Set("topics", JsonConvert.SerializeObject(existingTopics));
+                
+                RunOnUiThread(UpdateAdapter);
+                
+                var newTopics = existingTopics.Count - before;
+                Toast.MakeText(this, $"Retrieved {newTopics} new topics.", ToastLength.Short).Show();
+            };
+            
+            var subscribeButton = FindViewById<Button>(Resource.Id.subscribeButton);
+            subscribeButton.Click += delegate
+            {
+                FirebaseMessaging.Instance.SubscribeToTopic("topics");
+                Log.Debug(TAG, "Subscribed to topic notifications.");
+            };
 
             Log.Debug(TAG, "FCM Token: " + FirebaseInstanceId.Instance.Token);
+            
+            Platform.Init(this, bundle);
         }
 
         public void UpdateAdapter()
