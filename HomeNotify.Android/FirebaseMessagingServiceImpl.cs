@@ -7,6 +7,7 @@ using Android.Support.V4.App;
 using Android.Util;
 using Firebase.Messaging;
 using Newtonsoft.Json;
+using Xamarin.Essentials;
 
 namespace HomeNotify.Android
 {
@@ -45,11 +46,24 @@ namespace HomeNotify.Android
             if (data.ContainsKey("topics"))
             {
                 var topics = JsonConvert.DeserializeObject<IList<string>>(data["topics"]);
+                Dictionary<string, bool> existingTopics = JsonConvert.DeserializeObject<Dictionary<string, bool>>(Preferences.Get("topics", "{}"));
+                
                 foreach (string topic in topics)
                 {
                     FirebaseMessaging.Instance.SubscribeToTopic(topic);
+                    
+                    existingTopics[topic] = true;
+
                     Log.Debug(TAG, $"Subscribed to topic: {topic}.");
                 }
+                
+                Preferences.Set("topics", JsonConvert.SerializeObject(existingTopics));
+                
+                if (Platform.CurrentActivity is MainActivity activity)
+                {
+                    activity.RunOnUiThread(activity.UpdateAdapter);
+                }
+                
                 notificationBuilder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
                     .SetSmallIcon(Resource.Color.transparent)
                     .SetContentTitle("HomeNotify")
@@ -60,7 +74,18 @@ namespace HomeNotify.Android
             else if (data.ContainsKey("unsubscribeTopic"))
             {
                 var topic = data["unsubscribeTopic"];
+                Dictionary<string, bool> existingTopics = JsonConvert.DeserializeObject<Dictionary<string, bool>>(Preferences.Get("topics", "{}"));
+                
                 FirebaseMessaging.Instance.UnsubscribeFromTopic(topic);
+                existingTopics[topic] = false;
+                
+                Preferences.Set("topics", JsonConvert.SerializeObject(existingTopics));
+                
+                if (Platform.CurrentActivity is MainActivity activity)
+                {
+                    activity.RunOnUiThread(activity.UpdateAdapter);
+                }
+                
                 Log.Debug(TAG, $"Unsubscribed from topic {topic}.");
                 notificationBuilder = new NotificationCompat.Builder(this, MainActivity.CHANNEL_ID)
                     .SetSmallIcon(Resource.Color.transparent)

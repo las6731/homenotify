@@ -1,4 +1,5 @@
-﻿using Android.App;
+﻿using System.Collections.Generic;
+using Android.App;
 using Android.OS;
 using Android.Support.V7.App;
 using Android.Runtime;
@@ -8,6 +9,8 @@ using Android.Gms.Common;
 using Android.Util;
 using Firebase.Messaging;
 using Firebase.Iid;
+using Newtonsoft.Json;
+using Xamarin.Essentials;
 
 namespace HomeNotify.Android
 {
@@ -19,6 +22,10 @@ namespace HomeNotify.Android
         internal static readonly int NOTIFICATION_ID = 100;
 
         private TextView msgText;
+        private ListView topicList;
+
+        private ListAdapter listAdapter;
+
         protected override void OnCreate (Bundle bundle)
         {
             base.OnCreate (bundle);
@@ -35,7 +42,32 @@ namespace HomeNotify.Android
                 Log.Debug(TAG, "Subscribed to topic notifications.");
             };
 
+            if (!Preferences.ContainsKey("topics"))
+            {
+                Preferences.Set("topics", JsonConvert.SerializeObject(new Dictionary<string, bool>()));
+            }
+            
+            topicList = FindViewById<ListView>(Resource.Id.topicList);
+            
+            Platform.Init(this, bundle);
+            
+            UpdateAdapter();
+
             Log.Debug(TAG, "FCM Token: " + FirebaseInstanceId.Instance.Token);
+        }
+
+        public void UpdateAdapter()
+        {
+            if (listAdapter == null)
+            {
+                listAdapter = new ListAdapter(this, JsonConvert.DeserializeObject<Dictionary<string, bool>>(Preferences.Get("topics", "{}")));
+                topicList.Adapter = listAdapter;
+            }
+            else
+            {
+                listAdapter.Items = JsonConvert.DeserializeObject<Dictionary<string, bool>>(Preferences.Get("topics", "{}"));
+                listAdapter.NotifyDataSetChanged();
+            }
         }
         
         public bool IsPlayServicesAvailable ()
