@@ -1,13 +1,13 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
+﻿using MongoDB.Bson.Serialization.Attributes;
 
 namespace HomeNotify.API.Models
 {
-    [JsonObject(NamingStrategyType = typeof(CamelCaseNamingStrategy))]
-    public class NotificationMessage
+    public class NotificationMessage : ModelBase
     {
+        [BsonElement("title")]
         public string Title { get; set; }
         
+        [BsonElement("body")]
         public string Body { get; set; }
     }
 }

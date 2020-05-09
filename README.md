@@ -1,6 +1,6 @@
 # HomeNotify
 
-Basic RESTful web API built with ASP.NET Core to allow push notifications to be sent via API call to Android devices with the accompanying Xamarin app installed. Firebase Cloud Messaging is used to send notifications to the devices, and a PostgreSQL database is used for logging and for keeping track of notification topics that have been created through the API.
+Basic RESTful web API built with ASP.NET Core to allow push notifications to be sent via API call to Android devices with the accompanying Xamarin app installed. Firebase Cloud Messaging is used to send notifications to the devices, and MongoDB is used for logging and for keeping track of notification topics that have been created through the API.
 
 ## About
 

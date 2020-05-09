@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FirebaseAdmin.Messaging;
-using Google.Apis.Logging;
 using HomeNotify.API.Models;
 using HomeNotify.API.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
-using ILogger = Google.Apis.Logging.ILogger;
 
 namespace HomeNotify.API.Controllers
 {

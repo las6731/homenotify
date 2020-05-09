@@ -1,24 +1,22 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using System.IO;
 using FirebaseAdmin;
 using FirebaseAdmin.Messaging;
 using Google.Apis.Auth.OAuth2;
-using Google.Apis.Services;
-using HomeNotify.API.Database;
 using HomeNotify.API.Database.Implementation;
 using HomeNotify.API.Models;
+using HomeNotify.API.Repositories;
+using HomeNotify.API.Repositories.Implementation;
 using HomeNotify.API.Services;
 using HomeNotify.API.Services.Implementation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
 using Unity;
 using Unity.Lifetime;
 
@@ -59,34 +57,67 @@ namespace HomeNotify.API
                 new SingletonLifetimeManager());
             
             // setup database
-            var dbConnectivityProvider = container.Resolve<PostgresDatabaseConnectivityProvider>();
-            var connectionResult = dbConnectivityProvider.Connect();
-            if (connectionResult != ConnectionResult.Success)
+            var dbCreds = ReadDatabaseCredentials();
+
+            if (dbCreds == null)
             {
-                Console.WriteLine("Database failed to initialize; check logs for further details. Exiting...");
+                Console.WriteLine("Failed to connect to database. Exiting...");
                 Environment.Exit(1);
             }
+            
+            var mongoClient = new MongoClient(
+                $"mongodb://{dbCreds.Username}:{dbCreds.Password}@{dbCreds.Host}/{dbCreds.Database}");
+            var db = mongoClient.GetDatabase(dbCreds.Database);
 
-            container.RegisterInstance(dbConnectivityProvider, new SingletonLifetimeManager());
+            container.RegisterInstance(db, new SingletonLifetimeManager());
 
             // repositories
-            container.RegisterType(typeof(ILogger<>), typeof(PostgresLogger<>),
+            container.RegisterType(typeof(ILogger<>), typeof(MongoLogger<>),
                 new ContainerControlledLifetimeManager());
+            container.RegisterType<ITopicRepository, MongoTopicRepository>(new ContainerControlledLifetimeManager());
             
             // services
-            container.RegisterType<ITopicsService, MemoryTopicsService>(new ContainerControlledLifetimeManager());
+            container.RegisterType<ITopicsService, TopicsService>(new ContainerControlledLifetimeManager());
             container.RegisterType<IMessageService, FirebaseMessageService>(new ContainerControlledLifetimeManager());
         }
 
+        private DatabaseCredentials ReadDatabaseCredentials()
+        {
+            var path = Environment.GetEnvironmentVariable("DB_CREDENTIALS");
+            if (path == null)
+            {
+                Console.WriteLine("Database credentials environment variable not set.");
+                return null;
+            }
+            
+            FileStream fileStream = null;
+            StreamReader streamReader = null;
+            
+            try
+            {
+                fileStream = new FileStream(path, FileMode.Open);
+                streamReader = new StreamReader(fileStream);
+                return BsonSerializer.Deserialize<DatabaseCredentials>(streamReader.ReadToEnd());
+            }
+            catch (FileNotFoundException e)
+            {
+                Console.WriteLine("Database connection credentials file not found.");
+                return null;
+            }
+            finally
+            {
+                streamReader?.Close();
+                fileStream?.Close();
+            }
+        }
+
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IHostApplicationLifetime applicationLifetime)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-
-            applicationLifetime.ApplicationStopping.Register(OnShutdown);
 
             app.UseHttpsRedirection();
 
@@ -95,13 +126,6 @@ namespace HomeNotify.API
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
-        }
-
-        private void OnShutdown()
-        {
-            this.container.Resolve<PostgresDatabaseConnectivityProvider>().Disconnect();
-            Console.WriteLine("Disconnected from database successfully.");
-            System.Threading.Thread.Sleep(1000);
         }
     }
 }

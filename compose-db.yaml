@@ -1,20 +1,16 @@
 version: '3.7'
 services:
-    postgres:
-        image: postgres
-        container_name: postgres
+    mongo:
+        image: mongo
         ports:
-            - '5432:5432'
+            - '27017:27017'
         environment:
-            - POSTGRES_DB=homenotify
-            - POSTGRES_USER=homenotify
-            - POSTGRES_PASSWORD=HomeNotifyAPI123
-    pgadmin:
-        image: dpage/pgadmin4
-        container_name: pgadmin
+            MONGO_INITDB_ROOT_USERNAME: root
+            MONGO_INITDB_ROOT_PASSWORD: password
+    mongo-express:
+        image: mongo-express
         ports:
-            - '5433:5433'
+            - '8081:8081'
         environment:
-            - PGADMIN_DEFAULT_EMAIL=admin
-            - PGADMIN_DEFAULT_PASSWORD=password
-            - PGADMIN_LISTEN_PORT=5433
+            ME_CONFIG_MONGODB_ADMINUSERNAME: root
+            ME_CONFIG_MONGODB_ADMINPASSWORD: password

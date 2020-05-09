@@ -60,7 +60,7 @@ namespace HomeNotify.Android
                 var topics = JsonConvert.DeserializeObject<string[]>(content);
                 var existingTopics =
                     JsonConvert.DeserializeObject<Dictionary<string, bool>>(Preferences.Get("topics", "{}"));
-                var before = existingTopics.Count;
+                var existingTopicsCount = existingTopics.Count;
                 foreach (var topic in topics)
                 {
                     if (!existingTopics.ContainsKey(topic))
@@ -70,7 +70,7 @@ namespace HomeNotify.Android
                 
                 RunOnUiThread(UpdateAdapter);
                 
-                var newTopics = existingTopics.Count - before;
+                var newTopics = existingTopics.Count - existingTopicsCount;
                 Toast.MakeText(this, $"Retrieved {newTopics} new topics.", ToastLength.Short).Show();
             };
             
